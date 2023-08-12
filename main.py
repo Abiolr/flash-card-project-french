@@ -1,32 +1,47 @@
 from tkinter import *
 import pandas
 import random
+
 # --------------------------- CONSTANTS ------------------------------- #
 BACKGROUND_COLOR = "#B1DDC6"
-# --------------------------- FILE SETUP ------------------------------ #
+
+# ---------------- OPEN FILE AND EXCEPTION HANDLING ------------------- #
 try:
     data = pandas.read_csv("data/words_to_learn.csv")
 except (FileNotFoundError, pandas.errors.EmptyDataError):
     data = pandas.read_csv("data/french_words.csv")
+
+# --------------------------- VARIABLES ------------------------------- #
 data_list = data.to_dict(orient="records")
 words_to_learn_list = []
-french = ""
-english = ""
+french_word = ""
+english_word = ""
 
-def flip_card(french_word):
-    
-    english_translation = data_list[french_word]["English"]
+# --------------------------- FUNCTIONS ------------------------------- #
+def flip_card(french_word_index):
+    """
+    - passes the index of the french word to get the english translation
+    - flips the card with the english translation on the other side
+    - sets the right and wrong button to NORMAL
+    """
+    global french_word
+    global english_word
+    english_translation = data_list[french_word_index]["English"]
     flash_card.itemconfig(flash_card_img, image=flash_card_back)
     flash_card.itemconfig(title_text, text=f"English", fill="white")
     flash_card.itemconfig(word_text, text=f"{english_translation}", fill="white")
-    global french
-    global english
-    french = data_list[french_word]['French']
-    english = english_translation
+    french_word = data_list[french_word_index]['French']
+    english_word = english_translation
     right_button.config(state=NORMAL)
     wrong_button.config(state=NORMAL)
 
 def next_card():
+    """
+    - called at the beginning of program
+    - goes to the next card (shows french translation of word)
+    - sets the right and wrong button to DISABLED
+    - calls the flip_card function after 3 seconds
+    """
     random_index = random.randint(0, len(data_list) - 1)
     random_french_word = data_list[random_index]['French']
     flash_card.itemconfig(flash_card_img, image=flash_card_front)
@@ -37,19 +52,31 @@ def next_card():
     window.after(3000, flip_card, random_index)
 
 def right():
-    data_list.remove({"French": french, "English": english})
-    if {"French": french, "English": english} in words_to_learn_list:
-        words_to_learn_list.remove({"French": french, "English": english})
+    """
+    - called when right button is pressed
+    - removes word from list
+    - closes window if list is empty
+    - calls next_card function
+    """
+    data_list.remove({"French": french_word, "English": english_word})
+    if {"French": french_word, "English": english_word} in words_to_learn_list:
+        words_to_learn_list.remove({"French": french_word, "English": english_word})
     if len(data_list) == 0:
         window.destroy()
     next_card()
 
-def wrong() -> list:
+def wrong():
+    """
+    - called when wrong button is pressed
+    - adds word to list
+    - calls next_card function
+    """
     global french
     global english
-    if {"French": french, "English": english} not in words_to_learn_list:
-        words_to_learn_list.append({"French": french, "English": english})
+    if {"French": french_word, "English": english_word} not in words_to_learn_list:
+        words_to_learn_list.append({"French": french_word, "English": english_word})
     next_card()
+
 # ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
 window.title("Flashy")
@@ -75,5 +102,9 @@ next_card()
 
 window.mainloop()
 
+# Adding incorrect words to new file
+for words_remaining in data_list:
+    if words_remaining not in words_to_learn_list:
+        words_to_learn_list.append(words_remaining)
 words_to_learn = pandas.DataFrame(words_to_learn_list)
 words_to_learn.to_csv("data/words_to_learn.csv", index=False)
